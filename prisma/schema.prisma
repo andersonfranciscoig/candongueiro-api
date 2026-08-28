@@ -1,0 +1,426 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PASSENGER
+  DRIVER
+  CONDUCTOR
+  OPERATOR
+  ADMIN
+}
+
+enum VehicleStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VehicleOwnership {
+  OWNER
+  FLEET
+}
+
+enum TransactionType {
+  PAYMENT
+  TOPUP
+  RECEIPT
+  WITHDRAWAL
+  BONUS
+  REFUND
+  CONDUCTOR_PAYOUT
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+enum RefundStatus {
+  PENDING
+  CONDUCTOR_APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum TransactionStatus {
+  COMPLETED
+  PENDING
+  FAILED
+}
+
+enum WithdrawMethod {
+  EXPRESS
+  IBAN
+}
+
+enum WorkSessionStatus {
+  DRAFT
+  AWAITING_CONDUCTOR
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+enum FinancialAccess {
+  NONE
+  DAILY
+  FULL
+}
+
+enum PayoutSchedule {
+  MANUAL
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ConductorRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  AWAITING_DRIVER
+  PENDING_CONDUCTOR
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String   @unique
+  role      Role
+  balance   Int      @default(0)
+  pinHash   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wallet                  Wallet?
+  vehicles                Vehicle[]
+  transactions            LedgerTransaction[]
+  otpChallenges           OtpChallenge[]
+  notifications           Notification[]
+  driverInvites           ConductorInvite[]            @relation("DriverInvites")
+  conductorLink           ConductorLink?               @relation("ConductorOf")
+  conductors              ConductorLink[]              @relation("DriverConductors")
+  refundRequests          RefundRequest[]              @relation("PassengerRefunds")
+  conductorWithdraw       ConductorWithdrawRequest[]   @relation("ConductorWithdraws")
+  driverWithdrawDecisions ConductorWithdrawRequest[]   @relation("DriverWithdrawDecisions")
+  conductorProfile        ConductorProfile?
+  driverConductorLinks    DriverConductorRelation[]    @relation("DriverRelations")
+  conductorDriverLinks    DriverConductorRelation[]    @relation("ConductorRelations")
+  ownedWorkSessions       DailyWorkSession[]           @relation("SessionOwner")
+  drivingWorkSessions     DailyWorkSession[]           @relation("SessionDriver")
+  conductingWorkSessions  DailyWorkSession[]           @relation("SessionConductor")
+  sessionConductorRequests SessionConductorRequest[]
+  payoutsSent             ConductorPayout[]            @relation("PayoutDriver")
+  payoutsReceived         ConductorPayout[]            @relation("PayoutConductor")
+
+  @@map("users")
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  currency  String   @default("AOA")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+model Fleet {
+  id         String   @id @default(cuid())
+  name       String
+  operatorId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  vehicles Vehicle[]
+
+  @@map("fleets")
+}
+
+model Vehicle {
+  id             String           @id @default(cuid())
+  ownerId        String
+  plate          String           @unique
+  model          String?
+  driverName     String
+  status         VehicleStatus    @default(ACTIVE)
+  ownershipType  VehicleOwnership @default(OWNER)
+  fleetId        String?
+  qrCode         String           @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  owner        User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  fleet        Fleet?             @relation(fields: [fleetId], references: [id], onDelete: SetNull)
+  workSessions DailyWorkSession[]
+
+  @@index([ownerId])
+  @@map("vehicles")
+}
+
+model LedgerTransaction {
+  id           String            @id @default(cuid())
+  userId       String
+  type         TransactionType
+  amount       Int
+  title        String
+  status       TransactionStatus @default(PENDING)
+  reference    String            @unique
+  vehiclePlate String?
+  meta         Json?
+  createdAt    DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("ledger_transactions")
+}
+
+model OtpChallenge {
+  id         String    @id @default(cuid())
+  userId     String?
+  email      String
+  codeHash   String
+  purpose    String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email, purpose])
+  @@map("otp_challenges")
+}
+
+model TopUpRequest {
+  id        String            @id @default(cuid())
+  userId    String
+  amount    Int
+  entity    String            @default("0407")
+  reference String            @unique
+  status    TransactionStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  paidAt    DateTime?
+
+  @@index([userId, createdAt])
+  @@map("topup_requests")
+}
+
+model WithdrawalRequest {
+  id           String            @id @default(cuid())
+  userId       String
+  amount       Int
+  method       WithdrawMethod
+  expressPhone String?
+  iban         String?
+  bankName     String?
+  status       TransactionStatus @default(PENDING)
+  reference    String            @unique
+  createdAt    DateTime          @default(now())
+  processedAt  DateTime?
+
+  @@index([userId, createdAt])
+  @@map("withdrawal_requests")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  readAt    DateTime?
+  meta      Json?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model ConductorInvite {
+  id         String       @id @default(cuid())
+  driverId   String
+  email      String?
+  phone      String?
+  token      String       @unique
+  status     InviteStatus @default(PENDING)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  driver User @relation("DriverInvites", fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([phone, status])
+  @@index([email, status])
+  @@map("conductor_invites")
+}
+
+/// Legado — preferir DriverConductorRelation
+model ConductorLink {
+  id          String   @id @default(cuid())
+  driverId    String
+  conductorId String   @unique
+  createdAt   DateTime @default(now())
+
+  driver    User @relation("DriverConductors", fields: [driverId], references: [id], onDelete: Cascade)
+  conductor User @relation("ConductorOf", fields: [conductorId], references: [id], onDelete: Cascade)
+
+  @@index([driverId])
+  @@map("conductor_links")
+}
+
+model ConductorProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  isAvailable Boolean  @default(false)
+  city        String   @default("Luanda")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("conductor_profiles")
+}
+
+model DriverConductorRelation {
+  id              String          @id @default(cuid())
+  driverId        String
+  conductorId     String
+  active          Boolean         @default(true)
+  financialAccess FinancialAccess @default(DAILY)
+  payoutSchedule  PayoutSchedule  @default(MANUAL)
+  createdAt       DateTime        @default(now())
+  deactivatedAt   DateTime?
+
+  driver    User @relation("DriverRelations", fields: [driverId], references: [id], onDelete: Cascade)
+  conductor User @relation("ConductorRelations", fields: [conductorId], references: [id], onDelete: Cascade)
+
+  @@unique([driverId, conductorId])
+  @@index([conductorId, active])
+  @@index([driverId, active])
+  @@map("driver_conductor_relations")
+}
+
+model DailyWorkSession {
+  id                String            @id @default(cuid())
+  ownerDriverId     String
+  vehicleId         String
+  effectiveDriverId String
+  conductorId       String?
+  scheduledStart    DateTime
+  scheduledEnd      DateTime
+  actualStart       DateTime?
+  actualEnd         DateTime?
+  status            WorkSessionStatus @default(DRAFT)
+  financialAccess   FinancialAccess   @default(DAILY)
+  workDate          DateTime          @db.Date
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  ownerDriver       User                      @relation("SessionOwner", fields: [ownerDriverId], references: [id], onDelete: Cascade)
+  effectiveDriver   User                      @relation("SessionDriver", fields: [effectiveDriverId], references: [id], onDelete: Cascade)
+  conductor         User?                     @relation("SessionConductor", fields: [conductorId], references: [id], onDelete: SetNull)
+  vehicle           Vehicle                   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  conductorRequest  SessionConductorRequest?
+  payouts           ConductorPayout[]
+
+  @@index([ownerDriverId, workDate])
+  @@index([effectiveDriverId, status])
+  @@index([conductorId, status])
+  @@map("daily_work_sessions")
+}
+
+model SessionConductorRequest {
+  id          String                 @id @default(cuid())
+  sessionId   String                 @unique
+  conductorId String
+  status      ConductorRequestStatus @default(PENDING)
+  respondedAt DateTime?
+  createdAt   DateTime               @default(now())
+
+  session   DailyWorkSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  conductor User             @relation(fields: [conductorId], references: [id], onDelete: Cascade)
+
+  @@index([conductorId, status])
+  @@map("session_conductor_requests")
+}
+
+model ConductorPayout {
+  id                   String         @id @default(cuid())
+  driverId             String
+  conductorId          String
+  sessionId            String?
+  amount               Int
+  scheduleType         PayoutSchedule
+  status               PayoutStatus   @default(AWAITING_DRIVER)
+  reference            String         @unique
+  scheduledAt          DateTime?
+  driverConfirmedAt    DateTime?
+  conductorConfirmedAt DateTime?
+  createdAt            DateTime       @default(now())
+
+  driver    User              @relation("PayoutDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  conductor User              @relation("PayoutConductor", fields: [conductorId], references: [id], onDelete: Cascade)
+  session   DailyWorkSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([conductorId, status])
+  @@index([driverId, status])
+  @@map("conductor_payouts")
+}
+
+model RefundRequest {
+  id                 String       @id @default(cuid())
+  passengerId        String
+  paymentReference   String
+  amount             Int
+  reason             String?
+  status             RefundStatus @default(PENDING)
+  conductorDecision  String?
+  conductorDecidedAt DateTime?
+  driverDecision     String?
+  driverDecidedAt    DateTime?
+  createdAt          DateTime     @default(now())
+  processedAt        DateTime?
+
+  passenger User @relation("PassengerRefunds", fields: [passengerId], references: [id], onDelete: Cascade)
+
+  @@index([passengerId, createdAt])
+  @@index([paymentReference])
+  @@map("refund_requests")
+}
+
+model ConductorWithdrawRequest {
+  id             String            @id @default(cuid())
+  conductorId    String
+  driverId       String
+  amount         Int
+  status         TransactionStatus @default(PENDING)
+  driverDecision String?
+  decidedAt      DateTime?
+  createdAt      DateTime          @default(now())
+
+  conductor User @relation("ConductorWithdraws", fields: [conductorId], references: [id], onDelete: Cascade)
+  driver    User @relation("DriverWithdrawDecisions", fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([driverId, status])
+  @@map("conductor_withdraw_requests")
+}
