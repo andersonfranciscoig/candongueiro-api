@@ -275,4 +275,154 @@ export class MailService {
       "conductor.session-request",
     );
   }
+
+  sendWelcomeConductor(input: { email: string; name: string }) {
+    const rendered = T.authWelcomeConductor({
+      name: input.name,
+      dashboardUrl: `${this.frontendUrl}/cobrador`,
+    });
+    this.dispatch(
+      this.send({ email: input.email, name: input.name }, rendered, ["auth", "welcome", "conductor"]),
+      "auth.welcome-conductor",
+    );
+  }
+
+  sendNotificationMirror(input: {
+    email: string;
+    name: string;
+    headline: string;
+    message: string;
+    preview?: string;
+    emoji?: string;
+    details?: Array<{ label: string; value: string }>;
+    dashboardUrl?: string;
+    ctaLabel?: string;
+    tags: string[];
+  }) {
+    const rendered = T.opsGenericAlert({
+      name: input.name,
+      preview: input.preview ?? input.headline,
+      headline: input.headline,
+      message: input.message,
+      emoji: input.emoji,
+      details: input.details,
+      ctaUrl: input.dashboardUrl,
+      ctaLabel: input.ctaLabel,
+    });
+    this.dispatch(
+      this.send({ email: input.email, name: input.name }, rendered, input.tags),
+      `notification.${input.tags.join(".")}`,
+    );
+  }
+
+  sendConductorPaymentToConfirm(input: {
+    email: string;
+    name: string;
+    amount: number;
+    vehiclePlate: string;
+    reference: string;
+    occurredAt: string;
+  }) {
+    const rendered = T.opsPaymentToConfirm({
+      ...input,
+      dashboardUrl: `${this.frontendUrl}/cobrador/pagamentos`,
+    });
+    this.dispatch(
+      this.send({ email: input.email, name: input.name }, rendered, ["conductor", "payment-pending"]),
+      "conductor.payment-pending",
+    );
+  }
+
+  sendSessionResponse(input: {
+    email: string;
+    name: string;
+    accepted: boolean;
+    conductorName?: string;
+  }) {
+    const rendered = T.opsSessionResponse({
+      name: input.name,
+      accepted: input.accepted,
+      conductorName: input.conductorName,
+      dashboardUrl: `${this.frontendUrl}/motorista/turno`,
+    });
+    this.dispatch(
+      this.send({ email: input.email, name: input.name }, rendered, [
+        "session",
+        input.accepted ? "accepted" : "rejected",
+      ]),
+      "session.response",
+    );
+  }
+
+  sendSessionEnded(input: {
+    email: string;
+    name: string;
+    driverName: string;
+    vehiclePlate: string;
+  }) {
+    const rendered = T.opsSessionEnded({
+      name: input.name,
+      driverName: input.driverName,
+      vehiclePlate: input.vehiclePlate,
+      dashboardUrl: `${this.frontendUrl}/cobrador`,
+    });
+    this.dispatch(
+      this.send({ email: input.email, name: input.name }, rendered, ["session", "ended"]),
+      "session.ended",
+    );
+  }
+
+  sendPayoutNotification(input: {
+    email: string;
+    name: string;
+    headline: string;
+    message: string;
+    amount?: number;
+    role: "DRIVER" | "CONDUCTOR";
+    ctaLabel?: string;
+  }) {
+    const dashboardUrl =
+      input.role === "DRIVER"
+        ? `${this.frontendUrl}/motorista/cobradores`
+        : `${this.frontendUrl}/cobrador/pagamentos`;
+    const rendered = T.opsPayoutAlert({
+      name: input.name,
+      headline: input.headline,
+      message: input.message,
+      amount: input.amount,
+      dashboardUrl,
+      ctaLabel: input.ctaLabel,
+    });
+    this.dispatch(
+      this.send({ email: input.email, name: input.name }, rendered, ["payout", input.role.toLowerCase()]),
+      "payout.notification",
+    );
+  }
+
+  sendRefundNotification(input: {
+    email: string;
+    name: string;
+    headline: string;
+    message: string;
+    amount: number;
+    paymentReference: string;
+    role: "DRIVER" | "CONDUCTOR";
+  }) {
+    const dashboardUrl =
+      input.role === "DRIVER"
+        ? `${this.frontendUrl}/motorista/recebimentos`
+        : `${this.frontendUrl}/cobrador/pagamentos`;
+    const rendered = T.opsRefundAlert({
+      name: input.name,
+      headline: input.headline,
+      message: input.message,
+      amount: input.amount,
+      paymentReference: input.paymentReference,
+      dashboardUrl,
+    });
+    this.dispatch(
+      this.send({ email: input.email, name: input.name }, rendered, ["refund", input.role.toLowerCase()]),
+      "refund.notification",
+    );
+  }
 }

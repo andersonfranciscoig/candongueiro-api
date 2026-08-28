@@ -1,8 +1,9 @@
-import { Controller, Get, Param, Patch, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../../../../shared/infrastructure/auth/jwt-auth.guard";
 import {
   ListNotificationsUseCase,
+  MarkAllNotificationsReadUseCase,
   MarkNotificationReadUseCase,
 } from "../../../application/use-cases/notifications.use-case";
 
@@ -14,6 +15,7 @@ export class NotificationsController {
   constructor(
     private readonly listNotifications: ListNotificationsUseCase,
     private readonly markRead: MarkNotificationReadUseCase,
+    private readonly markAllRead: MarkAllNotificationsReadUseCase,
   ) {}
 
   @Get("me")
@@ -26,5 +28,11 @@ export class NotificationsController {
   @ApiOperation({ summary: "Marcar notificação como lida" })
   read(@Req() req: { user: { sub: string } }, @Param("id") id: string) {
     return this.markRead.execute(req.user.sub, id);
+  }
+
+  @Post("read-all")
+  @ApiOperation({ summary: "Marcar todas as notificações como lidas" })
+  readAll(@Req() req: { user: { sub: string } }) {
+    return this.markAllRead.execute(req.user.sub);
   }
 }

@@ -17,6 +17,7 @@ export interface NotificationRecord {
 export interface NotificationRepository {
   listForUser(userId: string, limit?: number): Promise<NotificationRecord[]>;
   markRead(userId: string, notificationId: string): Promise<NotificationRecord>;
+  markAllRead(userId: string): Promise<number>;
   countUnread(userId: string): Promise<number>;
 }
 
@@ -64,6 +65,14 @@ export class PrismaNotificationRepository implements NotificationRepository {
       data: { readAt: existing.readAt ?? new Date() },
     });
     return this.map(row);
+  }
+
+  async markAllRead(userId: string) {
+    const result = await this.prisma.notification.updateMany({
+      where: { userId, readAt: null },
+      data: { readAt: new Date() },
+    });
+    return result.count;
   }
 
   async countUnread(userId: string) {

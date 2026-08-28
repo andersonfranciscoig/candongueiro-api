@@ -44,3 +44,15 @@ export class MarkNotificationReadUseCase {
     };
   }
 }
+
+@Injectable()
+export class MarkAllNotificationsReadUseCase {
+  constructor(
+    @Inject(NOTIFICATION_REPOSITORY) private readonly notifications: NotificationRepository,
+  ) {}
+
+  async execute(userId: string) {
+    const marked = await this.notifications.markAllRead(userId);
+    return { marked };
+  }
+}

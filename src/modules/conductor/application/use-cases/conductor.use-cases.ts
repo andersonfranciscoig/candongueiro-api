@@ -12,6 +12,7 @@ import { hashPin } from "../../../../shared/domain/utils/pin-hash";
 import { PrismaService } from "../../../../shared/infrastructure/persistence/prisma/prisma.service";
 import { MailService } from "../../../mail/application/mail.service";
 import { NotificationPublisherService } from "../../../notifications/application/services/notification-publisher.service";
+import { NotificationType } from "../../../notifications/domain/notification-types";
 import {
   TOKEN_SERVICE,
   type TokenServicePort,
@@ -112,6 +113,7 @@ export class RegisterConductorUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationPublisherService,
+    private readonly mail: MailService,
     @Inject(TOKEN_SERVICE) private readonly tokens: TokenServicePort,
   ) {}
 
@@ -191,11 +193,20 @@ export class RegisterConductorUseCase {
 
     await this.notifications.publish({
       userId: invite.driverId,
-      type: "CONDUCTOR_JOINED",
+      type: NotificationType.CONDUCTOR_JOINED,
       title: "Novo cobrador associado",
       body: `${result.name} aceitou o convite e está ligado à sua conta.`,
       meta: { conductorId: result.id },
     });
+
+    await this.notifications.publish({
+      userId: result.id,
+      type: NotificationType.CONDUCTOR_WELCOME,
+      title: "Conta de cobrador activa",
+      body: "Bem-vindo! Foi associado ao motorista que o convidou.",
+      skipEmail: true,
+    });
+    this.mail.sendWelcomeConductor({ email: result.email, name: result.name });
 
     const accessToken = await this.tokens.sign({
       sub: result.id,

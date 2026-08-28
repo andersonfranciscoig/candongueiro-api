@@ -5,3 +5,4 @@ export * from "./wallet.templates";
 export * from "./profile.templates";
 export * from "./vehicle.templates";
 export * from "./promo.templates";
+export * from "./operations.templates";

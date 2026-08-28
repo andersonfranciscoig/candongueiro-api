@@ -9,7 +9,9 @@ import { USER_REPOSITORY, type UserRepository } from "../../../identity/domain/r
 import { MailService } from "../../../mail/application/mail.service";
 import { PinVerificationService } from "../../../identity/application/services/pin-verification.service";
 import { NotificationPublisherService } from "../../../notifications/application/services/notification-publisher.service";
+import { NotificationType } from "../../../notifications/domain/notification-types";
 import { PrismaService } from "../../../../shared/infrastructure/persistence/prisma/prisma.service";
+import { WorkSessionStatus } from "@prisma/client";
 import type { PayTripDto } from "../dto/wallet.dto";
 
 const LOW_BALANCE_THRESHOLD = 2_000;
@@ -72,28 +74,33 @@ export class PayTripUseCase {
     }
 
     if (driver) {
-      this.mail.sendPaymentReceived({
-        email: driver.email.value,
-        name: driver.name,
-        amount: dto.amount,
-        balanceAfter: result.driverBalance,
-        vehiclePlate: plate,
-        reference: result.receiptReference,
-        occurredAt,
+      await this.notifications.publish({
+        userId: result.driverId,
+        type: NotificationType.PAYMENT_RECEIVED,
+        title: "Pagamento recebido",
+        body: `Passageiro pagou ${dto.amount.toLocaleString("pt-AO")} Kz (${plate}).`,
+        meta: {
+          reference: result.receiptReference,
+          amount: dto.amount,
+          vehiclePlate: plate,
+          balanceAfter: result.driverBalance,
+          occurredAt,
+        },
       });
     }
 
-    const conductorLink = await this.findConductorForDriver(result.driverId);
-    if (conductorLink) {
+    const conductorId = await this.findConductorForPayment(result.driverId);
+    if (conductorId) {
       await this.notifications.publish({
-        userId: conductorLink.conductorId,
-        type: "PAYMENT_RECEIVED",
+        userId: conductorId,
+        type: NotificationType.PAYMENT_RECEIVED,
         title: "Novo pagamento na viagem",
         body: `Passageiro pagou ${dto.amount.toLocaleString("pt-AO")} Kz (${plate}). Confirme o recebimento.`,
         meta: {
           reference: result.receiptReference,
           amount: dto.amount,
           vehiclePlate: plate,
+          occurredAt,
         },
       });
     }
@@ -114,7 +121,24 @@ export class PayTripUseCase {
     };
   }
 
-  private findConductorForDriver(driverId: string) {
-    return this.prisma.conductorLink.findFirst({ where: { driverId } });
+  private async findConductorForPayment(driverId: string): Promise<string | null> {
+    const activeSession = await this.prisma.dailyWorkSession.findFirst({
+      where: {
+        OR: [{ effectiveDriverId: driverId }, { ownerDriverId: driverId }],
+        status: WorkSessionStatus.ACTIVE,
+        conductorId: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (activeSession?.conductorId) return activeSession.conductorId;
+
+    const relation = await this.prisma.driverConductorRelation.findFirst({
+      where: { driverId, active: true },
+      orderBy: { createdAt: "desc" },
+    });
+    if (relation) return relation.conductorId;
+
+    const link = await this.prisma.conductorLink.findFirst({ where: { driverId } });
+    return link?.conductorId ?? null;
   }
 }

@@ -14,6 +14,7 @@ import { Phone } from "../../../../shared/domain/value-objects/phone.vo";
 import { startOfDay, timesOverlap } from "../../../../shared/domain/utils/time-overlap";
 import { PrismaService } from "../../../../shared/infrastructure/persistence/prisma/prisma.service";
 import { NotificationPublisherService } from "../../../notifications/application/services/notification-publisher.service";
+import { NotificationType } from "../../../notifications/domain/notification-types";
 import { TriggerScheduledPayoutsUseCase } from "../../../conductor/application/use-cases/conductor-v2.use-cases";
 import { MailService } from "../../../mail/application/mail.service";
 import type { CreateWorkSessionDto, SearchAvailableConductorsDto } from "../dto/work-session.dto";
@@ -102,7 +103,7 @@ export class CreateWorkSessionUseCase {
       if (conductor) {
         await this.notifications.publish({
           userId: conductorId,
-          type: "SESSION_REQUEST",
+          type: NotificationType.SESSION_REQUEST,
           title: "Pedido de turno",
           body: `${owner.name} convidou-o para trabalhar das ${scheduledStart.toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })} às ${scheduledEnd.toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })}.`,
           meta: { sessionId: session.id },
@@ -218,6 +219,7 @@ export class EndWorkSessionUseCase {
         OR: [{ ownerDriverId: driverId }, { effectiveDriverId: driverId }],
         status: { in: [WorkSessionStatus.ACTIVE, WorkSessionStatus.AWAITING_CONDUCTOR] },
       },
+      include: { vehicle: true, ownerDriver: true },
     });
     if (!session) throw new NotFoundException("Turno");
 
@@ -239,10 +241,14 @@ export class EndWorkSessionUseCase {
     if (session.conductorId) {
       await this.notifications.publish({
         userId: session.conductorId,
-        type: "SESSION_ENDED",
+        type: NotificationType.SESSION_ENDED,
         title: "Turno encerrado",
         body: "O motorista encerrou o turno de hoje.",
-        meta: { sessionId },
+        meta: {
+          sessionId,
+          driverName: session.ownerDriver.name,
+          vehiclePlate: session.vehicle.plate,
+        },
       });
     }
 
@@ -262,7 +268,7 @@ export class RespondSessionRequestUseCase {
   async execute(conductorId: string, sessionId: string, decision: "ACCEPTED" | "REJECTED") {
     const request = await this.prisma.sessionConductorRequest.findFirst({
       where: { sessionId, conductorId, status: ConductorRequestStatus.PENDING },
-      include: { session: true },
+      include: { session: { include: { ownerDriver: true } }, conductor: true },
     });
     if (!request) throw new NotFoundException("Pedido de turno");
 
@@ -323,13 +329,13 @@ export class RespondSessionRequestUseCase {
 
     await this.notifications.publish({
       userId: request.session.ownerDriverId,
-      type: decision === "ACCEPTED" ? "SESSION_ACCEPTED" : "SESSION_REJECTED",
+      type: decision === "ACCEPTED" ? NotificationType.SESSION_ACCEPTED : NotificationType.SESSION_REJECTED,
       title: decision === "ACCEPTED" ? "Cobrador aceitou o turno" : "Cobrador recusou o turno",
       body:
         decision === "ACCEPTED"
           ? "O cobrador confirmou que vai trabalhar consigo hoje."
           : "O cobrador não pode trabalhar neste horário.",
-      meta: { sessionId },
+      meta: { sessionId, conductorName: request.conductor.name },
     });
 
     return { ok: true, decision };

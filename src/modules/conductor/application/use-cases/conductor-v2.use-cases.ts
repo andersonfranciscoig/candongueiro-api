@@ -19,6 +19,8 @@ import { hashPin, isValidPinFormat } from "../../../../shared/domain/utils/pin-h
 import { nextLedgerReference } from "../../../../shared/domain/utils/reference";
 import { PrismaService } from "../../../../shared/infrastructure/persistence/prisma/prisma.service";
 import { NotificationPublisherService } from "../../../notifications/application/services/notification-publisher.service";
+import { NotificationType } from "../../../notifications/domain/notification-types";
+import { MailService } from "../../../mail/application/mail.service";
 import {
   TOKEN_SERVICE,
   type TokenServicePort,
@@ -36,6 +38,8 @@ export class RegisterConductorStandaloneUseCase {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(TOKEN_SERVICE) private readonly tokens: TokenServicePort,
+    private readonly notifications: NotificationPublisherService,
+    private readonly mail: MailService,
   ) {}
 
   async execute(dto: RegisterConductorStandaloneDto) {
@@ -80,6 +84,15 @@ export class RegisterConductorStandaloneUseCase {
       email: user.email,
       role: user.role,
     });
+
+    await this.notifications.publish({
+      userId: user.id,
+      type: NotificationType.CONDUCTOR_WELCOME,
+      title: "Conta de cobrador activa",
+      body: "Bem-vindo! Pode confirmar pagamentos e aceitar turnos.",
+      skipEmail: true,
+    });
+    this.mail.sendWelcomeConductor({ email: user.email, name: user.name });
 
     return {
       accessToken,
@@ -189,11 +202,15 @@ export class AddFixedConductorUseCase {
 
 @Injectable()
 export class DeactivateConductorRelationUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationPublisherService,
+  ) {}
 
   async execute(driverId: string, conductorId: string) {
     const relation = await this.prisma.driverConductorRelation.findFirst({
       where: { driverId, conductorId, active: true },
+      include: { conductor: true, driver: true },
     });
     if (!relation) throw new NotFoundException("Associação");
 
@@ -211,6 +228,14 @@ export class DeactivateConductorRelationUseCase {
         },
         data: { status: WorkSessionStatus.CANCELLED, actualEnd: new Date() },
       });
+    });
+
+    await this.notifications.publish({
+      userId: conductorId,
+      type: NotificationType.CONDUCTOR_UNLINKED,
+      title: "Desassociado do motorista",
+      body: `${relation.driver.name} removeu a associação de cobrador.`,
+      meta: { driverId },
     });
 
     return { ok: true };
