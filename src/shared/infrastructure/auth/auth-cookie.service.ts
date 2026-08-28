@@ -15,17 +15,19 @@ export class AuthCookieService {
     res.cookie(AUTH_COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProd,
-      sameSite: "lax",
+      // Frontend (Vercel) e API (Render) em domínios distintos exigem SameSite=None.
+      sameSite: isProd ? "none" : "lax",
       path: "/",
       maxAge,
     });
   }
 
   clearSession(res: Response): void {
+    const isProd = this.config.get("NODE_ENV") === "production";
     res.clearCookie(AUTH_COOKIE_NAME, {
       httpOnly: true,
-      secure: this.config.get("NODE_ENV") === "production",
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       path: "/",
     });
   }
