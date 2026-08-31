@@ -29,7 +29,7 @@ export class AuthController {
   async verify(@Body() dto: VerifyOtpDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.verifyOtp.execute(dto);
     this.authCookies.setSession(res, result.accessToken);
-    return { user: result.user, welcomeBonus: result.welcomeBonus ?? undefined };
+    return { user: result.user, accessToken: result.accessToken, welcomeBonus: result.welcomeBonus ?? undefined };
   }
 
   @Post("login")
@@ -38,7 +38,7 @@ export class AuthController {
   async login(@Body() dto: LoginWithPinDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.loginWithPin.execute(dto);
     this.authCookies.setSession(res, result.accessToken);
-    return { user: result.user };
+    return { user: result.user, accessToken: result.accessToken };
   }
 
   @Post("logout")

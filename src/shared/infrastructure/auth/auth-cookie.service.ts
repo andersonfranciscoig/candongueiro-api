@@ -19,6 +19,7 @@ export class AuthCookieService {
       sameSite: isProd ? "none" : "lax",
       path: "/",
       maxAge,
+      ...(isProd ? { partitioned: true } : {}),
     });
   }
 
@@ -29,6 +30,7 @@ export class AuthCookieService {
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
       path: "/",
+      ...(isProd ? { partitioned: true } : {}),
     });
   }
 

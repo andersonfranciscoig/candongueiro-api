@@ -72,7 +72,7 @@ export class ConductorController {
   ) {
     const result = await this.registerStandalone.execute(dto);
     this.authCookies.setSession(res, result.accessToken);
-    return { user: result.user };
+    return { user: result.user, accessToken: result.accessToken };
   }
 
   @Post("invite/check")
@@ -87,7 +87,7 @@ export class ConductorController {
   async register(@Body() dto: RegisterConductorDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.registerConductor.execute(dto);
     this.authCookies.setSession(res, result.accessToken);
-    return { user: result.user };
+    return { user: result.user, accessToken: result.accessToken };
   }
 
   @Post("invite")
