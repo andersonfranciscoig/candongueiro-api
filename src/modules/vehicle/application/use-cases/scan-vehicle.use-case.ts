@@ -11,8 +11,11 @@ export class ScanVehicleUseCase {
   constructor(@Inject(VEHICLE_REPOSITORY) private readonly vehicles: VehicleRepository) {}
 
   async execute(dto: ScanVehicleDto) {
-    const vehicle = await this.vehicles.findByQrCode(dto.qrCode);
-    if (!vehicle) throw new NotFoundException("Veículo");
+    const qrCode = dto.qrCode.trim();
+    const vehicle = await this.vehicles.findByQrCode(qrCode);
+    if (!vehicle) {
+      throw new NotFoundException("Veículo não encontrado para este QR Code.");
+    }
 
     return {
       id: vehicle.id,
