@@ -87,3 +87,25 @@ export class ChangePinDto {
   @Matches(/^\d{6}$/)
   newPin!: string;
 }
+
+export class RequestRecoverOtpDto {
+  @ApiProperty({ example: "anderson@email.com" })
+  @IsEmail()
+  email!: string;
+}
+
+export class RecoverPinDto {
+  @ApiProperty({ example: "anderson@email.com" })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ example: "123456", description: "Código enviado por email" })
+  @IsString()
+  @MinLength(6)
+  code!: string;
+
+  @ApiProperty({ example: "654321", description: "Novo código secreto de 6 dígitos" })
+  @IsString()
+  @Matches(/^\d{6}$/, { message: "O código secreto deve ter 6 dígitos." })
+  newPin!: string;
+}

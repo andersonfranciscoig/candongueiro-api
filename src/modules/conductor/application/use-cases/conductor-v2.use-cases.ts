@@ -135,6 +135,54 @@ export class SetConductorAvailabilityUseCase {
 }
 
 @Injectable()
+export class DiscoverConductorsUseCase {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async execute(driverId: string, query?: string) {
+    const linked = await this.prisma.driverConductorRelation.findMany({
+      where: { driverId, active: true },
+      select: { conductorId: true },
+    });
+    const excludeIds = linked.map((r) => r.conductorId);
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        role: Role.CONDUCTOR,
+        id: { notIn: excludeIds },
+        ...(query?.trim()
+          ? {
+              OR: [
+                { name: { contains: query.trim(), mode: "insensitive" } },
+                { phone: { contains: query.replace(/\D/g, "") } },
+              ],
+            }
+          : {}),
+      },
+      take: 40,
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        conductorProfile: { select: { city: true, isAvailable: true } },
+      },
+    });
+
+    return {
+      items: users.map((u) => ({
+        id: u.id,
+        name: u.name,
+        phone: u.phone,
+        email: u.email,
+        city: u.conductorProfile?.city ?? "Luanda",
+        isAvailable: u.conductorProfile?.isAvailable ?? false,
+      })),
+    };
+  }
+}
+
+@Injectable()
 export class AddFixedConductorUseCase {
   constructor(
     private readonly prisma: PrismaService,

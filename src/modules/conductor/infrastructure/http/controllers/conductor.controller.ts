@@ -9,6 +9,7 @@ import {
   ConfirmPaymentDto,
   ConductorWithdrawRequestDto,
   DecideConductorWithdrawDto,
+  DiscoverConductorsDto,
   InviteConductorDto,
   RegisterConductorDto,
 } from "../../../application/dto/conductor.dto";
@@ -26,6 +27,7 @@ import {
   ConfirmConductorPayoutUseCase,
   CreateConductorPayoutUseCase,
   DeactivateConductorRelationUseCase,
+  DiscoverConductorsUseCase,
   ListConductorPayoutsUseCase,
   ListDriverConductorsV2UseCase,
   RegisterConductorStandaloneUseCase,
@@ -50,6 +52,7 @@ export class ConductorController {
     private readonly registerStandalone: RegisterConductorStandaloneUseCase,
     private readonly setAvailability: SetConductorAvailabilityUseCase,
     private readonly addFixed: AddFixedConductorUseCase,
+    private readonly discoverConductors: DiscoverConductorsUseCase,
     private readonly deactivateRelation: DeactivateConductorRelationUseCase,
     private readonly listConductorsV2: ListDriverConductorsV2UseCase,
     private readonly createPayout: CreateConductorPayoutUseCase,
@@ -112,6 +115,14 @@ export class ConductorController {
   @ApiOperation({ summary: "Motorista adiciona cobrador fixo" })
   addRelation(@Req() req: { user: { sub: string } }, @Body() dto: AddFixedConductorDto) {
     return this.addFixed.execute(req.user.sub, dto);
+  }
+
+  @Post("discover")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Listar cobradores disponíveis para associar" })
+  discover(@Req() req: { user: { sub: string } }, @Body() dto: DiscoverConductorsDto) {
+    return this.discoverConductors.execute(req.user.sub, dto.q);
   }
 
   @Delete("relations/:conductorId")

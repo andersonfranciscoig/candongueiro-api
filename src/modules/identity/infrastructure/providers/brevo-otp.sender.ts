@@ -34,7 +34,12 @@ export class BrevoOtpSender implements OtpSenderPort {
   ) {}
 
   async send(email: string, code: string, purpose: string): Promise<void> {
-    const flow = purpose === "login" ? "login" : "register";
+    const flow =
+      purpose === "login"
+        ? "login"
+        : purpose === "recover_pin" || purpose === "pin_change"
+          ? "recover"
+          : "register";
     const ttlSeconds = Number(this.config.get("OTP_TTL_SECONDS") ?? 300);
     const expiresMinutes = Math.max(1, Math.round(ttlSeconds / 60));
 

@@ -7,6 +7,7 @@ import { PrismaVehicleRepository } from "./infrastructure/persistence/prisma/pri
 import { GetMyVehiclesUseCase } from "./application/use-cases/get-my-vehicles.use-case";
 import { RegisterVehicleUseCase } from "./application/use-cases/register-vehicle.use-case";
 import { ScanVehicleUseCase } from "./application/use-cases/scan-vehicle.use-case";
+import { UpdateVehicleStatusUseCase } from "./application/use-cases/update-vehicle-status.use-case";
 
 @Module({
   imports: [IdentityModule, MailModule],
@@ -15,6 +16,7 @@ import { ScanVehicleUseCase } from "./application/use-cases/scan-vehicle.use-cas
     GetMyVehiclesUseCase,
     RegisterVehicleUseCase,
     ScanVehicleUseCase,
+    UpdateVehicleStatusUseCase,
     { provide: VEHICLE_REPOSITORY, useClass: PrismaVehicleRepository },
   ],
 })

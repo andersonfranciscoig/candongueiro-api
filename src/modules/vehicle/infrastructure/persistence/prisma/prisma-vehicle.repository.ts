@@ -52,6 +52,19 @@ export class PrismaVehicleRepository implements VehicleRepository {
     return row ? this.map(row) : null;
   }
 
+  async findById(id: string): Promise<VehicleRecord | null> {
+    const row = await this.prisma.vehicle.findUnique({ where: { id } });
+    return row ? this.map(row) : null;
+  }
+
+  async updateStatus(id: string, status: DomainVehicleStatus): Promise<VehicleRecord> {
+    const row = await this.prisma.vehicle.update({
+      where: { id },
+      data: { status },
+    });
+    return this.map(row);
+  }
+
   async create(input: {
     ownerId: string;
     plate: string;

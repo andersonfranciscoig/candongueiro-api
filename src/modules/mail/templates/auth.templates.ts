@@ -15,10 +15,14 @@ export function authVerifyOtp(props: {
   name?: string;
   otp: string;
   expiresMinutes: number;
-  flow: "login" | "register";
+  flow: "login" | "register" | "recover";
 }): RenderedEmail {
   const action =
-    props.flow === "login" ? "entrar na sua conta" : "concluir o registo";
+    props.flow === "login"
+      ? "entrar na sua conta"
+      : props.flow === "recover"
+        ? "recuperar o acesso à sua conta"
+        : "concluir o registo";
   const greeting = props.name?.trim()
     ? `Olá <strong>${e(props.name.trim())}</strong>,`
     : "Olá,";

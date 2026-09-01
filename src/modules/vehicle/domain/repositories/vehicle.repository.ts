@@ -16,6 +16,7 @@ export interface VehicleRecord {
 
 export interface VehicleRepository {
   findByOwner(ownerId: string): Promise<VehicleRecord[]>;
+  findById(id: string): Promise<VehicleRecord | null>;
   findByQrCode(qrCode: string): Promise<VehicleRecord | null>;
   findByPlate(plate: string): Promise<VehicleRecord | null>;
   create(input: {
@@ -26,4 +27,5 @@ export interface VehicleRepository {
     qrCode: string;
     ownershipType?: "OWNER" | "FLEET";
   }): Promise<VehicleRecord>;
+  updateStatus(id: string, status: VehicleStatus): Promise<VehicleRecord>;
 }

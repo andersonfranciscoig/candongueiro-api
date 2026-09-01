@@ -2,10 +2,14 @@ import { Body, Controller, Post, Res } from "@nestjs/common";
 import { ApiCookieAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { AuthCookieService } from "../../../../../shared/infrastructure/auth/auth-cookie.service";
-import { LoginWithPinDto, RequestOtpDto, VerifyOtpDto } from "../../../application/dto/auth.dto";
+import { LoginWithPinDto, RecoverPinDto, RequestOtpDto, RequestRecoverOtpDto, VerifyOtpDto } from "../../../application/dto/auth.dto";
 import { LoginWithPinUseCase } from "../../../application/use-cases/login-with-pin.use-case";
 import { RequestOtpUseCase } from "../../../application/use-cases/request-otp.use-case";
 import { VerifyOtpUseCase } from "../../../application/use-cases/verify-otp.use-case";
+import {
+  RecoverPinUseCase,
+  RequestRecoverOtpUseCase,
+} from "../../../application/use-cases/recover-pin.use-case";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -14,6 +18,8 @@ export class AuthController {
     private readonly requestOtp: RequestOtpUseCase,
     private readonly verifyOtp: VerifyOtpUseCase,
     private readonly loginWithPin: LoginWithPinUseCase,
+    private readonly requestRecoverOtp: RequestRecoverOtpUseCase,
+    private readonly recoverPinUseCase: RecoverPinUseCase,
     private readonly authCookies: AuthCookieService,
   ) {}
 
@@ -46,5 +52,17 @@ export class AuthController {
   logout(@Res({ passthrough: true }) res: Response) {
     this.authCookies.clearSession(res);
     return { ok: true };
+  }
+
+  @Post("recover/request")
+  @ApiOperation({ summary: "Pedir código de recuperação por email" })
+  recoverRequest(@Body() dto: RequestRecoverOtpDto) {
+    return this.requestRecoverOtp.execute(dto);
+  }
+
+  @Post("recover/pin")
+  @ApiOperation({ summary: "Definir novo código secreto com código do email" })
+  recoverPin(@Body() dto: RecoverPinDto) {
+    return this.recoverPinUseCase.execute(dto);
   }
 }

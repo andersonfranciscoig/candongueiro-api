@@ -49,7 +49,7 @@ export class MailService {
     name?: string;
     otp: string;
     expiresMinutes: number;
-    flow: "login" | "register";
+    flow: "login" | "register" | "recover";
   }) {
     const rendered = T.authVerifyOtp({
       name: input.name,

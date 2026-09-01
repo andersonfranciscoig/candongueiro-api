@@ -14,6 +14,10 @@ import {
   ChangePinUseCase,
   RequestPinChangeOtpUseCase,
 } from "./application/use-cases/change-pin.use-case";
+import {
+  RecoverPinUseCase,
+  RequestRecoverOtpUseCase,
+} from "./application/use-cases/recover-pin.use-case";
 import { PromotionsModule } from "../promotions/promotions.module";
 import { PinVerificationService } from "./application/services/pin-verification.service";
 import { PrismaUserRepository } from "./infrastructure/persistence/prisma/prisma-user.repository";
@@ -48,6 +52,8 @@ import { GetProfileUseCase, UpdateProfileUseCase } from "./application/use-cases
     LoginWithPinUseCase,
     RequestPinChangeOtpUseCase,
     ChangePinUseCase,
+    RequestRecoverOtpUseCase,
+    RecoverPinUseCase,
     PinVerificationService,
     GetProfileUseCase,
     UpdateProfileUseCase,

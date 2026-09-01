@@ -67,3 +67,10 @@ export class DecideConductorWithdrawDto {
   @IsString()
   decision!: "APPROVED" | "REJECTED";
 }
+
+export class DiscoverConductorsDto {
+  @ApiPropertyOptional({ description: "Filtrar por nome ou telefone" })
+  @IsOptional()
+  @IsString()
+  q?: string;
+}

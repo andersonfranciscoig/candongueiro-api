@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsOptional, IsString, MinLength, ValidateIf } from "class-validator";
+import { IsBoolean, IsEnum, IsOptional, IsString, MinLength, ValidateIf } from "class-validator";
 
 export class RegisterVehicleDto {
   @ApiProperty({ example: "LD-45-23-AB" })
@@ -35,4 +35,10 @@ export class ScanVehicleDto {
   @IsString()
   @MinLength(4)
   plate?: string;
+}
+
+export class UpdateVehicleStatusDto {
+  @ApiProperty({ enum: ["ACTIVE", "INACTIVE"] })
+  @IsEnum(["ACTIVE", "INACTIVE"] as const)
+  status!: "ACTIVE" | "INACTIVE";
 }
