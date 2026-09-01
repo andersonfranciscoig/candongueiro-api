@@ -9,6 +9,11 @@ import { CreateTopUpRequestUseCase } from "./application/use-cases/create-topup-
 import { GetWalletMetricsUseCase } from "./application/use-cases/get-wallet-metrics.use-case";
 import { GetWalletUseCase } from "./application/use-cases/get-wallet.use-case";
 import { PayTripUseCase } from "./application/use-cases/pay-trip.use-case";
+import {
+  CreateTripPaymentRequestUseCase,
+  LookupTripPaymentRequestsUseCase,
+  PayTripPaymentRequestUseCase,
+} from "./application/use-cases/trip-payment-request.use-cases";
 import { WithdrawUseCase } from "./application/use-cases/withdraw.use-case";
 
 import { NotificationsModule } from "../notifications/notifications.module";
@@ -23,6 +28,9 @@ import { NotificationsModule } from "../notifications/notifications.module";
     ConfirmTopUpUseCase,
     PayTripUseCase,
     WithdrawUseCase,
+    CreateTripPaymentRequestUseCase,
+    LookupTripPaymentRequestsUseCase,
+    PayTripPaymentRequestUseCase,
     { provide: WALLET_REPOSITORY, useClass: PrismaWalletRepository },
   ],
 })

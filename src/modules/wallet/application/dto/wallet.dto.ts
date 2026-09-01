@@ -49,6 +49,47 @@ export class PayTripDto {
   pin!: string;
 }
 
+export class CreateTripPaymentRequestDto {
+  @ApiProperty({ example: 500 })
+  @IsInt()
+  @IsPositive()
+  amount!: number;
+
+  @ApiPropertyOptional({ example: "+244 923 000 000" })
+  @IsOptional()
+  @IsString()
+  passengerPhone?: string;
+
+  @ApiPropertyOptional({ example: "passageiro@email.com" })
+  @IsOptional()
+  @IsString()
+  passengerEmail?: string;
+
+  @ApiPropertyOptional({ example: "LD-45-23-AB" })
+  @IsOptional()
+  @IsString()
+  vehiclePlate?: string;
+}
+
+export class LookupTripPaymentRequestsDto {
+  @ApiPropertyOptional({ example: "+244 923 000 000" })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiPropertyOptional({ example: "passageiro@email.com" })
+  @IsOptional()
+  @IsString()
+  email?: string;
+}
+
+export class PayTripPaymentRequestDto {
+  @ApiProperty({ example: "123456" })
+  @IsString()
+  @Matches(/^\d{6}$/, { message: "O código secreto deve ter 6 dígitos." })
+  pin!: string;
+}
+
 export class WithdrawDto {
   @ApiProperty({ example: 3000 })
   @IsInt()

@@ -1,10 +1,13 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../../../../shared/infrastructure/auth/jwt-auth.guard";
 import {
   ConfirmTopUpDto,
   CreateTopUpRequestDto,
+  CreateTripPaymentRequestDto,
+  LookupTripPaymentRequestsDto,
   PayTripDto,
+  PayTripPaymentRequestDto,
   WalletMetricsQueryDto,
   WithdrawDto,
 } from "../../../application/dto/wallet.dto";
@@ -13,6 +16,11 @@ import { CreateTopUpRequestUseCase } from "../../../application/use-cases/create
 import { GetWalletMetricsUseCase } from "../../../application/use-cases/get-wallet-metrics.use-case";
 import { GetWalletUseCase } from "../../../application/use-cases/get-wallet.use-case";
 import { PayTripUseCase } from "../../../application/use-cases/pay-trip.use-case";
+import {
+  CreateTripPaymentRequestUseCase,
+  LookupTripPaymentRequestsUseCase,
+  PayTripPaymentRequestUseCase,
+} from "../../../application/use-cases/trip-payment-request.use-cases";
 import { WithdrawUseCase } from "../../../application/use-cases/withdraw.use-case";
 
 @ApiTags("wallet")
@@ -27,6 +35,9 @@ export class WalletController {
     private readonly confirmTopUp: ConfirmTopUpUseCase,
     private readonly payTrip: PayTripUseCase,
     private readonly withdraw: WithdrawUseCase,
+    private readonly createTripPaymentRequest: CreateTripPaymentRequestUseCase,
+    private readonly lookupTripPaymentRequests: LookupTripPaymentRequestsUseCase,
+    private readonly payTripPaymentRequest: PayTripPaymentRequestUseCase,
   ) {}
 
   @Get("me")
@@ -57,6 +68,34 @@ export class WalletController {
   @ApiOperation({ summary: "Pagar viagem a um candongueiro" })
   pay(@Req() req: { user: { sub: string } }, @Body() dto: PayTripDto) {
     return this.payTrip.execute(req.user.sub, dto);
+  }
+
+  @Post("trip-requests")
+  @ApiOperation({ summary: "Motorista/cobrador envia pedido de pagamento ao passageiro" })
+  createTripRequest(
+    @Req() req: { user: { sub: string } },
+    @Body() dto: CreateTripPaymentRequestDto,
+  ) {
+    return this.createTripPaymentRequest.execute(req.user.sub, dto);
+  }
+
+  @Post("trip-requests/lookup")
+  @ApiOperation({ summary: "Passageiro procura pedidos pelo telefone ou email" })
+  lookupTripRequests(
+    @Req() req: { user: { sub: string } },
+    @Body() dto: LookupTripPaymentRequestsDto,
+  ) {
+    return this.lookupTripPaymentRequests.execute(req.user.sub, dto);
+  }
+
+  @Post("trip-requests/:id/pay")
+  @ApiOperation({ summary: "Passageiro paga um pedido enviado pelo motorista" })
+  payTripRequest(
+    @Req() req: { user: { sub: string } },
+    @Param("id") id: string,
+    @Body() dto: PayTripPaymentRequestDto,
+  ) {
+    return this.payTripPaymentRequest.execute(req.user.sub, id, dto);
   }
 
   @Post("withdraw")

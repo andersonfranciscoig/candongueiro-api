@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsOptional, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsOptional, IsString, MinLength, ValidateIf } from "class-validator";
 
 export class RegisterVehicleDto {
   @ApiProperty({ example: "LD-45-23-AB" })
@@ -24,8 +24,15 @@ export class RegisterVehicleDto {
 }
 
 export class ScanVehicleDto {
-  @ApiProperty({ example: "CPAY:VEH:LD-45-23-AB" })
+  @ApiPropertyOptional({ example: "CPAY:VEH:LD-45-23-AB" })
+  @ValidateIf((dto: ScanVehicleDto) => !dto.plate)
   @IsString()
   @MinLength(8)
-  qrCode!: string;
+  qrCode?: string;
+
+  @ApiPropertyOptional({ example: "LD-45-23-AB", description: "Código/matrícula do candongueiro" })
+  @ValidateIf((dto: ScanVehicleDto) => !dto.qrCode)
+  @IsString()
+  @MinLength(4)
+  plate?: string;
 }

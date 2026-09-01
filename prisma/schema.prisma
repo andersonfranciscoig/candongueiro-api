@@ -126,6 +126,8 @@ model User {
   sessionConductorRequests SessionConductorRequest[]
   payoutsSent             ConductorPayout[]            @relation("PayoutDriver")
   payoutsReceived         ConductorPayout[]            @relation("PayoutConductor")
+  tripRequestsAsDriver    TripPaymentRequest[]         @relation("DriverTripRequests")
+  tripRequestsAsConductor TripPaymentRequest[]         @relation("ConductorTripRequests")
 
   @@map("users")
 }
@@ -423,4 +425,29 @@ model ConductorWithdrawRequest {
 
   @@index([driverId, status])
   @@map("conductor_withdraw_requests")
+}
+
+
+model TripPaymentRequest {
+  id             String            @id @default(cuid())
+  reference      String            @unique
+  driverId       String
+  conductorId    String?
+  passengerPhone String?
+  passengerEmail String?
+  vehiclePlate   String
+  amount         Int
+  status         TransactionStatus @default(PENDING)
+  expiresAt      DateTime
+  paidAt         DateTime?
+  paymentRef     String?
+  createdAt      DateTime          @default(now())
+
+  driver    User  @relation("DriverTripRequests", fields: [driverId], references: [id], onDelete: Cascade)
+  conductor User? @relation("ConductorTripRequests", fields: [conductorId], references: [id], onDelete: SetNull)
+
+  @@index([passengerPhone, status])
+  @@index([passengerEmail, status])
+  @@index([driverId, status])
+  @@map("trip_payment_requests")
 }
