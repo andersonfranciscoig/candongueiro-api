@@ -56,6 +56,38 @@ export class RespondSessionRequestDto {
   decision!: "ACCEPTED" | "REJECTED";
 }
 
+export class UpdateWorkSessionDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  scheduledStart?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  scheduledEnd?: string;
+
+  @ApiPropertyOptional({ enum: ["NONE", "DAILY", "FULL"] })
+  @IsOptional()
+  @IsString()
+  financialAccess?: "NONE" | "DAILY" | "FULL";
+
+  @ApiPropertyOptional({ description: "Novo cobrador (reenvia convite)" })
+  @IsOptional()
+  @IsString()
+  conductorId?: string;
+
+  @ApiPropertyOptional({ description: "Remover cobrador e trabalhar sozinho" })
+  @IsOptional()
+  @IsBoolean()
+  solo?: boolean;
+
+  @ApiPropertyOptional({ description: "Telefone do motorista efectivo" })
+  @IsOptional()
+  @IsString()
+  effectiveDriverPhone?: string;
+}
+
 export class AddFixedConductorDto {
   @ApiPropertyOptional()
   @IsOptional()

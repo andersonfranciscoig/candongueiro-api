@@ -17,7 +17,7 @@ import { NotificationPublisherService } from "../../../notifications/application
 import { NotificationType } from "../../../notifications/domain/notification-types";
 import { TriggerScheduledPayoutsUseCase } from "../../../conductor/application/use-cases/conductor-v2.use-cases";
 import { MailService } from "../../../mail/application/mail.service";
-import type { CreateWorkSessionDto, SearchAvailableConductorsDto } from "../dto/work-session.dto";
+import type { CreateWorkSessionDto, SearchAvailableConductorsDto, UpdateWorkSessionDto } from "../dto/work-session.dto";
 
 @Injectable()
 export class CreateWorkSessionUseCase {
@@ -416,5 +416,234 @@ export class ListPendingSessionRequestsUseCase {
         createdAt: r.createdAt.toISOString(),
       })),
     };
+  }
+}
+
+function mapSessionDetail(session: {
+  id: string;
+  status: WorkSessionStatus;
+  scheduledStart: Date;
+  scheduledEnd: Date;
+  actualStart: Date | null;
+  actualEnd: Date | null;
+  financialAccess: FinancialAccess;
+  conductorId: string | null;
+  vehicle: { id: string; plate: string; model: string | null; qrCode: string };
+  effectiveDriver: { id: string; name: string; phone?: string };
+  ownerDriver: { id: string; name: string };
+  conductor?: { id: string; name: string; phone?: string } | null;
+  conductorRequest?: { status: ConductorRequestStatus } | null;
+}) {
+  return {
+    id: session.id,
+    status: session.status,
+    scheduledStart: session.scheduledStart.toISOString(),
+    scheduledEnd: session.scheduledEnd.toISOString(),
+    actualStart: session.actualStart?.toISOString() ?? null,
+    actualEnd: session.actualEnd?.toISOString() ?? null,
+    financialAccess: session.financialAccess,
+    conductorId: session.conductorId,
+    conductorRequestStatus: session.conductorRequest?.status ?? null,
+    vehicle: {
+      id: session.vehicle.id,
+      plate: session.vehicle.plate,
+      model: session.vehicle.model,
+      qrCode: session.vehicle.qrCode,
+    },
+    effectiveDriver: {
+      id: session.effectiveDriver.id,
+      name: session.effectiveDriver.name,
+      phone: session.effectiveDriver.phone,
+    },
+    ownerDriver: { id: session.ownerDriver.id, name: session.ownerDriver.name },
+    conductor: session.conductor
+      ? {
+          id: session.conductor.id,
+          name: session.conductor.name,
+          phone: session.conductor.phone,
+        }
+      : null,
+  };
+}
+
+@Injectable()
+export class GetWorkSessionUseCase {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async execute(userId: string, sessionId: string) {
+    const session = await this.prisma.dailyWorkSession.findFirst({
+      where: {
+        id: sessionId,
+        OR: [{ ownerDriverId: userId }, { effectiveDriverId: userId }],
+      },
+      include: {
+        vehicle: true,
+        effectiveDriver: true,
+        ownerDriver: true,
+        conductor: true,
+        conductorRequest: true,
+      },
+    });
+    if (!session) throw new NotFoundException("Turno");
+    return { session: mapSessionDetail(session) };
+  }
+}
+
+@Injectable()
+export class UpdateWorkSessionUseCase {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationPublisherService,
+    private readonly mail: MailService,
+  ) {}
+
+  async execute(ownerDriverId: string, sessionId: string, dto: UpdateWorkSessionDto) {
+    const session = await this.prisma.dailyWorkSession.findFirst({
+      where: {
+        id: sessionId,
+        ownerDriverId,
+        status: { in: [WorkSessionStatus.ACTIVE, WorkSessionStatus.AWAITING_CONDUCTOR] },
+      },
+      include: {
+        vehicle: true,
+        ownerDriver: true,
+        effectiveDriver: true,
+        conductor: true,
+        conductorRequest: true,
+      },
+    });
+    if (!session) throw new NotFoundException("Turno");
+
+    const scheduledStart = dto.scheduledStart
+      ? new Date(dto.scheduledStart)
+      : session.scheduledStart;
+    const scheduledEnd = dto.scheduledEnd ? new Date(dto.scheduledEnd) : session.scheduledEnd;
+    if (scheduledEnd <= scheduledStart) {
+      throw new BadRequestException("Horário de fim deve ser posterior ao início.");
+    }
+
+    let effectiveDriverId = session.effectiveDriverId;
+    if (dto.effectiveDriverPhone) {
+      const phone = new Phone(dto.effectiveDriverPhone).value;
+      const driver = await this.prisma.user.findUnique({ where: { phone } });
+      if (!driver || driver.role !== Role.DRIVER) {
+        throw new BadRequestException("Motorista efectivo não encontrado.");
+      }
+      effectiveDriverId = driver.id;
+    }
+
+    const financialAccess = dto.financialAccess
+      ? (dto.financialAccess as FinancialAccess)
+      : session.financialAccess;
+
+    let conductorId = session.conductorId;
+    let status = session.status;
+    const previousConductorId = session.conductorId;
+
+    if (dto.solo) {
+      conductorId = null;
+      status = WorkSessionStatus.ACTIVE;
+    } else if (dto.conductorId && dto.conductorId !== session.conductorId) {
+      conductorId = dto.conductorId;
+      status = WorkSessionStatus.AWAITING_CONDUCTOR;
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (dto.solo || (dto.conductorId && dto.conductorId !== session.conductorId)) {
+        await tx.sessionConductorRequest.updateMany({
+          where: { sessionId, status: ConductorRequestStatus.PENDING },
+          data: { status: ConductorRequestStatus.CANCELLED, respondedAt: new Date() },
+        });
+      }
+
+      const row = await tx.dailyWorkSession.update({
+        where: { id: sessionId },
+        data: {
+          scheduledStart,
+          scheduledEnd,
+          financialAccess,
+          effectiveDriverId,
+          conductorId,
+          status,
+          workDate: startOfDay(scheduledStart),
+          ...(status === WorkSessionStatus.ACTIVE && !session.actualStart
+            ? { actualStart: new Date() }
+            : {}),
+        },
+        include: {
+          vehicle: true,
+          effectiveDriver: true,
+          ownerDriver: true,
+          conductor: true,
+          conductorRequest: true,
+        },
+      });
+
+      if (dto.conductorId && dto.conductorId !== session.conductorId && !dto.solo) {
+        await tx.sessionConductorRequest.upsert({
+          where: { sessionId },
+          create: {
+            sessionId,
+            conductorId: dto.conductorId,
+            status: ConductorRequestStatus.PENDING,
+          },
+          update: {
+            conductorId: dto.conductorId,
+            status: ConductorRequestStatus.PENDING,
+            respondedAt: null,
+          },
+        });
+      }
+
+      return row;
+    });
+
+    if (previousConductorId && previousConductorId !== conductorId) {
+      await this.notifications.publish({
+        userId: previousConductorId,
+        type: NotificationType.SESSION_ENDED,
+        title: "Turno actualizado",
+        body: "O motorista alterou a equipa do turno.",
+        meta: {
+          sessionId,
+          driverName: session.ownerDriver.name,
+          vehiclePlate: session.vehicle.plate,
+        },
+      });
+    }
+
+    if (dto.conductorId && dto.conductorId !== session.conductorId && !dto.solo) {
+      const conductor = await this.prisma.user.findUnique({ where: { id: dto.conductorId } });
+      if (conductor) {
+        await this.notifications.publish({
+          userId: dto.conductorId,
+          type: NotificationType.SESSION_REQUEST,
+          title: "Pedido de turno",
+          body: `${session.ownerDriver.name} convidou-o para trabalhar das ${scheduledStart.toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })} às ${scheduledEnd.toLocaleTimeString("pt-AO", { hour: "2-digit", minute: "2-digit" })}.`,
+          meta: { sessionId },
+        });
+        this.mail.sendConductorSessionRequest({
+          email: conductor.email,
+          conductorName: conductor.name,
+          driverName: session.ownerDriver.name,
+          vehiclePlate: session.vehicle.plate,
+          startAt: scheduledStart.toISOString(),
+          endAt: scheduledEnd.toISOString(),
+        });
+      }
+    }
+
+    const refreshed = await this.prisma.dailyWorkSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        vehicle: true,
+        effectiveDriver: true,
+        ownerDriver: true,
+        conductor: true,
+        conductorRequest: true,
+      },
+    });
+
+    return { session: mapSessionDetail(refreshed!) };
   }
 }

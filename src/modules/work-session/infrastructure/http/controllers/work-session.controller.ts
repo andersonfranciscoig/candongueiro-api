@@ -19,14 +19,17 @@ import {
   CreateWorkSessionDto,
   RespondSessionRequestDto,
   SearchAvailableConductorsDto,
+  UpdateWorkSessionDto,
 } from "../../../application/dto/work-session.dto";
 import {
   CreateWorkSessionUseCase,
   EndWorkSessionUseCase,
   GetActiveWorkSessionUseCase,
+  GetWorkSessionUseCase,
   ListAvailableConductorsUseCase,
   ListPendingSessionRequestsUseCase,
   RespondSessionRequestUseCase,
+  UpdateWorkSessionUseCase,
 } from "../../../application/use-cases/work-session.use-cases";
 
 @ApiTags("work-sessions")
@@ -39,6 +42,8 @@ export class WorkSessionController {
     private readonly respondRequest: RespondSessionRequestUseCase,
     private readonly listAvailable: ListAvailableConductorsUseCase,
     private readonly listPending: ListPendingSessionRequestsUseCase,
+    private readonly getSession: GetWorkSessionUseCase,
+    private readonly updateSession: UpdateWorkSessionUseCase,
   ) {}
 
   @Post()
@@ -55,6 +60,26 @@ export class WorkSessionController {
   @ApiOperation({ summary: "Turno activo do utilizador" })
   active(@Req() req: { user: { sub: string; role: Role } }) {
     return this.getActive.execute(req.user.sub, req.user.role);
+  }
+
+  @Get(":id")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Detalhes de um turno" })
+  getOne(@Req() req: { user: { sub: string } }, @Param("id") id: string) {
+    return this.getSession.execute(req.user.sub, id);
+  }
+
+  @Patch(":id")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Actualizar turno activo" })
+  update(
+    @Req() req: { user: { sub: string } },
+    @Param("id") id: string,
+    @Body() dto: UpdateWorkSessionDto,
+  ) {
+    return this.updateSession.execute(req.user.sub, id, dto);
   }
 
   @Patch(":id/end")

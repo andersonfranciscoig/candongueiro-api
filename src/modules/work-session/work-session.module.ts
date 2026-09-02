@@ -8,9 +8,11 @@ import {
   CreateWorkSessionUseCase,
   EndWorkSessionUseCase,
   GetActiveWorkSessionUseCase,
+  GetWorkSessionUseCase,
   ListAvailableConductorsUseCase,
   ListPendingSessionRequestsUseCase,
   RespondSessionRequestUseCase,
+  UpdateWorkSessionUseCase,
 } from "./application/use-cases/work-session.use-cases";
 
 @Module({
@@ -19,6 +21,8 @@ import {
   providers: [
     CreateWorkSessionUseCase,
     GetActiveWorkSessionUseCase,
+    GetWorkSessionUseCase,
+    UpdateWorkSessionUseCase,
     EndWorkSessionUseCase,
     RespondSessionRequestUseCase,
     ListAvailableConductorsUseCase,
