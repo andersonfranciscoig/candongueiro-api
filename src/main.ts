@@ -2,7 +2,7 @@ import { setDefaultResultOrder } from "node:dns";
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import * as cookieParser from "cookie-parser";
+import cookieParser from "cookie-parser";
 import { AppModule } from "./app.module";
 import { GlobalExceptionFilter } from "./shared/infrastructure/http/http-exception.filter";
 import { validationExceptionFactory } from "./shared/infrastructure/http/validation-exception.factory";
