@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../../../../shared/infrastructure/auth/jwt-auth.guard";
 import {
@@ -6,6 +6,8 @@ import {
   MarkAllNotificationsReadUseCase,
   MarkNotificationReadUseCase,
 } from "../../../application/use-cases/notifications.use-case";
+import { PushNotificationService } from "../../../application/services/push-notification.service";
+import { SubscribePushDto, UnsubscribePushDto } from "../../../application/dto/push.dto";
 
 @ApiTags("notifications")
 @ApiBearerAuth()
@@ -16,6 +18,7 @@ export class NotificationsController {
     private readonly listNotifications: ListNotificationsUseCase,
     private readonly markRead: MarkNotificationReadUseCase,
     private readonly markAllRead: MarkAllNotificationsReadUseCase,
+    private readonly push: PushNotificationService,
   ) {}
 
   @Get("me")
@@ -34,5 +37,27 @@ export class NotificationsController {
   @ApiOperation({ summary: "Marcar todas as notificações como lidas" })
   readAll(@Req() req: { user: { sub: string } }) {
     return this.markAllRead.execute(req.user.sub);
+  }
+
+  @Get("push/vapid-public-key")
+  @ApiOperation({ summary: "Chave pública VAPID para push web" })
+  vapidPublicKey() {
+    return { publicKey: this.push.getPublicKey() };
+  }
+
+  @Post("push/subscribe")
+  @ApiOperation({ summary: "Subscrever push web" })
+  subscribe(
+    @Req() req: { user: { sub: string }; headers: Record<string, string | string[] | undefined> },
+    @Body() dto: SubscribePushDto,
+  ) {
+    const ua = req.headers["user-agent"];
+    return this.push.subscribe(req.user.sub, dto, typeof ua === "string" ? ua : undefined);
+  }
+
+  @Post("push/unsubscribe")
+  @ApiOperation({ summary: "Cancelar subscrição push web" })
+  unsubscribe(@Req() req: { user: { sub: string } }, @Body() dto: UnsubscribePushDto) {
+    return this.push.unsubscribe(req.user.sub, dto.endpoint);
   }
 }

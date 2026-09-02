@@ -108,6 +108,7 @@ export class CreateTripPaymentRequestUseCase {
         title: "Pedido de pagamento",
         body: `${request.driver.name} pediu ${dto.amount.toLocaleString("pt-AO")} Kz (${vehicle.plate}).`,
         meta: {
+          requestId: request.id,
           reference: request.reference,
           amount: dto.amount,
           vehiclePlate: vehicle.plate,
@@ -209,5 +210,70 @@ export class PayTripPaymentRequestUseCase {
     });
 
     return result;
+  }
+}
+
+@Injectable()
+export class ListMyTripPaymentRequestsUseCase {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async execute(passengerId: string) {
+    const passenger = await this.prisma.user.findUnique({ where: { id: passengerId } });
+    if (!passenger) throw new NotFoundException("Utilizador");
+
+    const requests = await this.prisma.tripPaymentRequest.findMany({
+      where: {
+        status: TransactionStatus.PENDING,
+        expiresAt: { gt: new Date() },
+        OR: [{ passengerPhone: passenger.phone }, { passengerEmail: passenger.email.toLowerCase() }],
+      },
+      include: { driver: true },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+
+    return {
+      items: requests.map((item) => ({
+        id: item.id,
+        reference: item.reference,
+        amount: item.amount,
+        vehiclePlate: item.vehiclePlate,
+        driverName: item.driver.name,
+        expiresAt: item.expiresAt.toISOString(),
+        createdAt: item.createdAt.toISOString(),
+      })),
+    };
+  }
+}
+
+@Injectable()
+export class RejectTripPaymentRequestUseCase {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async execute(passengerId: string, requestId: string) {
+    const passenger = await this.prisma.user.findUnique({ where: { id: passengerId } });
+    if (!passenger) throw new NotFoundException("Utilizador");
+
+    const request = await this.prisma.tripPaymentRequest.findUnique({
+      where: { id: requestId },
+    });
+    if (!request || request.status !== TransactionStatus.PENDING) {
+      throw new NotFoundException("Pedido de pagamento");
+    }
+
+    const phoneMatch = request.passengerPhone && request.passengerPhone === passenger.phone;
+    const emailMatch =
+      request.passengerEmail &&
+      request.passengerEmail === passenger.email.toLowerCase();
+    if (!phoneMatch && !emailMatch) {
+      throw new ForbiddenException("Este pedido não está associado à sua conta.");
+    }
+
+    await this.prisma.tripPaymentRequest.update({
+      where: { id: request.id },
+      data: { status: TransactionStatus.FAILED },
+    });
+
+    return { ok: true, id: request.id };
   }
 }

@@ -2,12 +2,14 @@ import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../../../shared/infrastructure/persistence/prisma/prisma.service";
 import { NotificationEmailService } from "./notification-email.service";
+import { PushNotificationService } from "./push-notification.service";
 
 @Injectable()
 export class NotificationPublisherService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emails: NotificationEmailService,
+    private readonly push: PushNotificationService,
   ) {}
 
   async publish(input: {
@@ -31,6 +33,13 @@ export class NotificationPublisherService {
     if (!input.skipEmail) {
       this.emails.dispatch(input.userId, input.type, input.title, input.body, input.meta);
     }
+
+    void this.push.sendToUser(input.userId, {
+      title: input.title,
+      body: input.body,
+      type: input.type,
+      meta: input.meta,
+    });
 
     return {
       id: row.id,

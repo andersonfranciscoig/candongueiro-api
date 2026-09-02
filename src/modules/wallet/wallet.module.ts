@@ -11,8 +11,10 @@ import { GetWalletUseCase } from "./application/use-cases/get-wallet.use-case";
 import { PayTripUseCase } from "./application/use-cases/pay-trip.use-case";
 import {
   CreateTripPaymentRequestUseCase,
+  ListMyTripPaymentRequestsUseCase,
   LookupTripPaymentRequestsUseCase,
   PayTripPaymentRequestUseCase,
+  RejectTripPaymentRequestUseCase,
 } from "./application/use-cases/trip-payment-request.use-cases";
 import { WithdrawUseCase } from "./application/use-cases/withdraw.use-case";
 
@@ -30,7 +32,9 @@ import { NotificationsModule } from "../notifications/notifications.module";
     WithdrawUseCase,
     CreateTripPaymentRequestUseCase,
     LookupTripPaymentRequestsUseCase,
+    ListMyTripPaymentRequestsUseCase,
     PayTripPaymentRequestUseCase,
+    RejectTripPaymentRequestUseCase,
     { provide: WALLET_REPOSITORY, useClass: PrismaWalletRepository },
   ],
 })

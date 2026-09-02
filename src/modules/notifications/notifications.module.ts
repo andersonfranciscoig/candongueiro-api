@@ -8,6 +8,7 @@ import {
 } from "./application/use-cases/notifications.use-case";
 import { NotificationPublisherService } from "./application/services/notification-publisher.service";
 import { NotificationEmailService } from "./application/services/notification-email.service";
+import { PushNotificationService } from "./application/services/push-notification.service";
 import { NotificationsController } from "./infrastructure/http/controllers/notifications.controller";
 
 @Module({
@@ -19,9 +20,10 @@ import { NotificationsController } from "./infrastructure/http/controllers/notif
     MarkAllNotificationsReadUseCase,
     NotificationPublisherService,
     NotificationEmailService,
+    PushNotificationService,
     PrismaNotificationRepository,
     { provide: NOTIFICATION_REPOSITORY, useExisting: PrismaNotificationRepository },
   ],
-  exports: [NOTIFICATION_REPOSITORY, NotificationPublisherService],
+  exports: [NOTIFICATION_REPOSITORY, NotificationPublisherService, PushNotificationService],
 })
 export class NotificationsModule {}

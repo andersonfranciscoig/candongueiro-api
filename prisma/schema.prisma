@@ -128,6 +128,7 @@ model User {
   payoutsReceived         ConductorPayout[]            @relation("PayoutConductor")
   tripRequestsAsDriver    TripPaymentRequest[]         @relation("DriverTripRequests")
   tripRequestsAsConductor TripPaymentRequest[]         @relation("ConductorTripRequests")
+  pushSubscriptions       PushSubscription[]
 
   @@map("users")
 }
@@ -450,4 +451,19 @@ model TripPaymentRequest {
   @@index([passengerEmail, status])
   @@index([driverId, status])
   @@map("trip_payment_requests")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

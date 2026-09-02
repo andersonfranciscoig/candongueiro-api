@@ -18,8 +18,10 @@ import { GetWalletUseCase } from "../../../application/use-cases/get-wallet.use-
 import { PayTripUseCase } from "../../../application/use-cases/pay-trip.use-case";
 import {
   CreateTripPaymentRequestUseCase,
+  ListMyTripPaymentRequestsUseCase,
   LookupTripPaymentRequestsUseCase,
   PayTripPaymentRequestUseCase,
+  RejectTripPaymentRequestUseCase,
 } from "../../../application/use-cases/trip-payment-request.use-cases";
 import { WithdrawUseCase } from "../../../application/use-cases/withdraw.use-case";
 
@@ -37,7 +39,9 @@ export class WalletController {
     private readonly withdraw: WithdrawUseCase,
     private readonly createTripPaymentRequest: CreateTripPaymentRequestUseCase,
     private readonly lookupTripPaymentRequests: LookupTripPaymentRequestsUseCase,
+    private readonly listMyTripPaymentRequests: ListMyTripPaymentRequestsUseCase,
     private readonly payTripPaymentRequest: PayTripPaymentRequestUseCase,
+    private readonly rejectTripPaymentRequest: RejectTripPaymentRequestUseCase,
   ) {}
 
   @Get("me")
@@ -86,6 +90,18 @@ export class WalletController {
     @Body() dto: LookupTripPaymentRequestsDto,
   ) {
     return this.lookupTripPaymentRequests.execute(req.user.sub, dto);
+  }
+
+  @Get("trip-requests/me")
+  @ApiOperation({ summary: "Pedidos pendentes associados à conta autenticada" })
+  myTripRequests(@Req() req: { user: { sub: string } }) {
+    return this.listMyTripPaymentRequests.execute(req.user.sub);
+  }
+
+  @Post("trip-requests/:id/reject")
+  @ApiOperation({ summary: "Passageiro recusa pedido de pagamento" })
+  rejectTripRequest(@Req() req: { user: { sub: string } }, @Param("id") id: string) {
+    return this.rejectTripPaymentRequest.execute(req.user.sub, id);
   }
 
   @Post("trip-requests/:id/pay")
