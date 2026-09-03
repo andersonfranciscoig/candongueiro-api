@@ -120,3 +120,20 @@ export class WithdrawDto {
   @IsString()
   bankName?: string;
 }
+
+export class TransferDto {
+  @ApiProperty({ example: "+244 923 000 001" })
+  @IsString()
+  @MinLength(9)
+  toPhone!: string;
+
+  @ApiProperty({ example: 1000 })
+  @IsInt()
+  @IsPositive()
+  amount!: number;
+
+  @ApiProperty({ example: "123456" })
+  @IsString()
+  @Matches(/^\d{6}$/, { message: "O código secreto deve ter 6 dígitos." })
+  pin!: string;
+}

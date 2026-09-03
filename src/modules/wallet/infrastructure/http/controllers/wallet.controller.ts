@@ -8,6 +8,7 @@ import {
   LookupTripPaymentRequestsDto,
   PayTripDto,
   PayTripPaymentRequestDto,
+  TransferDto,
   WalletMetricsQueryDto,
   WithdrawDto,
 } from "../../../application/dto/wallet.dto";
@@ -16,6 +17,7 @@ import { CreateTopUpRequestUseCase } from "../../../application/use-cases/create
 import { GetWalletMetricsUseCase } from "../../../application/use-cases/get-wallet-metrics.use-case";
 import { GetWalletUseCase } from "../../../application/use-cases/get-wallet.use-case";
 import { PayTripUseCase } from "../../../application/use-cases/pay-trip.use-case";
+import { TransferUseCase } from "../../../application/use-cases/transfer.use-case";
 import {
   CreateTripPaymentRequestUseCase,
   ListMyTripPaymentRequestsUseCase,
@@ -37,6 +39,7 @@ export class WalletController {
     private readonly confirmTopUp: ConfirmTopUpUseCase,
     private readonly payTrip: PayTripUseCase,
     private readonly withdraw: WithdrawUseCase,
+    private readonly transfer: TransferUseCase,
     private readonly createTripPaymentRequest: CreateTripPaymentRequestUseCase,
     private readonly lookupTripPaymentRequests: LookupTripPaymentRequestsUseCase,
     private readonly listMyTripPaymentRequests: ListMyTripPaymentRequestsUseCase,
@@ -118,5 +121,11 @@ export class WalletController {
   @ApiOperation({ summary: "Levantamento (Express ou IBAN)" })
   withdrawFunds(@Req() req: { user: { sub: string } }, @Body() dto: WithdrawDto) {
     return this.withdraw.execute(req.user.sub, dto);
+  }
+
+  @Post("transfer")
+  @ApiOperation({ summary: "Transferir saldo para outra carteira CandongueiroPay" })
+  transferFunds(@Req() req: { user: { sub: string } }, @Body() dto: TransferDto) {
+    return this.transfer.execute(req.user.sub, dto);
   }
 }

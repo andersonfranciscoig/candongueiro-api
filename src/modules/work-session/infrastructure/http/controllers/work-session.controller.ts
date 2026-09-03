@@ -31,6 +31,10 @@ import {
   RespondSessionRequestUseCase,
   UpdateWorkSessionUseCase,
 } from "../../../application/use-cases/work-session.use-cases";
+import {
+  GetConductorActivityStatsUseCase,
+  GetDriverActivityStatsUseCase,
+} from "../../../application/use-cases/activity-stats.use-cases";
 
 @ApiTags("work-sessions")
 @Controller("work-sessions")
@@ -44,6 +48,8 @@ export class WorkSessionController {
     private readonly listPending: ListPendingSessionRequestsUseCase,
     private readonly getSession: GetWorkSessionUseCase,
     private readonly updateSession: UpdateWorkSessionUseCase,
+    private readonly conductorStats: GetConductorActivityStatsUseCase,
+    private readonly driverStats: GetDriverActivityStatsUseCase,
   ) {}
 
   @Post()
@@ -60,6 +66,22 @@ export class WorkSessionController {
   @ApiOperation({ summary: "Turno activo do utilizador" })
   active(@Req() req: { user: { sub: string; role: Role } }) {
     return this.getActive.execute(req.user.sub, req.user.role);
+  }
+
+  @Get("stats/conductor")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Métricas de actividade do cobrador" })
+  conductorActivity(@Req() req: { user: { sub: string } }) {
+    return this.conductorStats.execute(req.user.sub);
+  }
+
+  @Get("stats/driver")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Métricas de actividade do motorista" })
+  driverActivity(@Req() req: { user: { sub: string } }) {
+    return this.driverStats.execute(req.user.sub);
   }
 
   @Get(":id")

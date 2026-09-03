@@ -17,6 +17,7 @@ import {
   RejectTripPaymentRequestUseCase,
 } from "./application/use-cases/trip-payment-request.use-cases";
 import { WithdrawUseCase } from "./application/use-cases/withdraw.use-case";
+import { TransferUseCase } from "./application/use-cases/transfer.use-case";
 
 import { NotificationsModule } from "../notifications/notifications.module";
 
@@ -30,6 +31,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
     ConfirmTopUpUseCase,
     PayTripUseCase,
     WithdrawUseCase,
+    TransferUseCase,
     CreateTripPaymentRequestUseCase,
     LookupTripPaymentRequestsUseCase,
     ListMyTripPaymentRequestsUseCase,

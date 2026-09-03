@@ -33,6 +33,8 @@ enum TransactionType {
   BONUS
   REFUND
   CONDUCTOR_PAYOUT
+  TRANSFER_OUT
+  TRANSFER_IN
 }
 
 enum InviteStatus {

@@ -14,6 +14,10 @@ import {
   RespondSessionRequestUseCase,
   UpdateWorkSessionUseCase,
 } from "./application/use-cases/work-session.use-cases";
+import {
+  GetConductorActivityStatsUseCase,
+  GetDriverActivityStatsUseCase,
+} from "./application/use-cases/activity-stats.use-cases";
 
 @Module({
   imports: [AuthModule, MailModule, NotificationsModule, forwardRef(() => ConductorModule)],
@@ -27,9 +31,13 @@ import {
     RespondSessionRequestUseCase,
     ListAvailableConductorsUseCase,
     ListPendingSessionRequestsUseCase,
+    GetConductorActivityStatsUseCase,
+    GetDriverActivityStatsUseCase,
   ],
   exports: [
     GetActiveWorkSessionUseCase,
+    GetConductorActivityStatsUseCase,
+    GetDriverActivityStatsUseCase,
   ],
 })
 export class WorkSessionModule {}

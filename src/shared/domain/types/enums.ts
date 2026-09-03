@@ -14,6 +14,8 @@ export enum TransactionType {
   BONUS = "BONUS",
   REFUND = "REFUND",
   CONDUCTOR_PAYOUT = "CONDUCTOR_PAYOUT",
+  TRANSFER_OUT = "TRANSFER_OUT",
+  TRANSFER_IN = "TRANSFER_IN",
 }
 
 export enum TransactionStatus {
