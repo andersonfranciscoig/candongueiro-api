@@ -11,6 +11,11 @@ export class WalletMetricsQueryDto {
   @IsOptional()
   @IsDateString()
   date?: string;
+
+  @ApiPropertyOptional({ example: "LD-45-23-AB", description: "Filtrar métricas por matrícula" })
+  @IsOptional()
+  @IsString()
+  vehiclePlate?: string;
 }
 
 export class CreateTopUpRequestDto {

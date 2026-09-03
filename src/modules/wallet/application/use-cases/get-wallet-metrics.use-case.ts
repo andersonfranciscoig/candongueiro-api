@@ -73,6 +73,8 @@ export class GetWalletMetricsUseCase {
       earnSide,
     );
 
+    const plate = query.vehiclePlate?.trim().toUpperCase();
+
     const rows = await this.prisma.ledgerTransaction.findMany({
       where: {
         userId,
@@ -80,14 +82,21 @@ export class GetWalletMetricsUseCase {
         status: TransactionStatus.COMPLETED,
         createdAt: { gte: from, lte: to },
         ...(audience === "conductor" ? { amount: { gt: 0 } } : {}),
+        ...(plate ? { vehiclePlate: plate } : {}),
       },
       select: { amount: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     });
 
     const points = this.aggregate(query.period, anchor, rows);
+    const plateHint = plate ? ` · ${plate}` : "";
 
-    return { points, subtitle, periodLabel, role: audience };
+    return {
+      points,
+      subtitle: `${subtitle}${plateHint}`,
+      periodLabel,
+      role: audience,
+    };
   }
 
   private resolveRange(
