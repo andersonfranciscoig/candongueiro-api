@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, Min, MinLength } from "class-validator";
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, Length, Min, MinLength } from "class-validator";
 
 export class CreateWorkSessionDto {
   @ApiProperty()
@@ -171,5 +171,13 @@ export class ConfirmPayoutDto {
 
   @ApiPropertyOptional({ description: "Valor final (pagamentos automáticos)" })
   @IsOptional()
+  @IsInt()
+  @Min(1)
   amount?: number;
+
+  @ApiPropertyOptional({ description: "Código secreto (obrigatório quando o motorista confirma o pagamento)" })
+  @IsOptional()
+  @IsString()
+  @Length(6, 6)
+  pin?: string;
 }

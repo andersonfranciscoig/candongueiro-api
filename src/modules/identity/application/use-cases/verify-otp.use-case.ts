@@ -130,8 +130,10 @@ export class VerifyOtpUseCase {
         email: user.email.value,
         phone: user.phone.value,
         role: user.role,
+        homeRole: user.homeRole,
         balance: user.balance,
         createdAt: user.createdAt.toISOString(),
+        switchableRoles: user.switchableRoles(),
       },
       welcomeBonus,
     };

@@ -18,6 +18,7 @@ import { Phone } from "../../../../shared/domain/value-objects/phone.vo";
 import { hashPin, isValidPinFormat } from "../../../../shared/domain/utils/pin-hash";
 import { nextLedgerReference } from "../../../../shared/domain/utils/reference";
 import { PrismaService } from "../../../../shared/infrastructure/persistence/prisma/prisma.service";
+import { PinVerificationService } from "../../../identity/application/services/pin-verification.service";
 import { NotificationPublisherService } from "../../../notifications/application/services/notification-publisher.service";
 import { NotificationType } from "../../../notifications/domain/notification-types";
 import { MailService } from "../../../mail/application/mail.service";
@@ -65,6 +66,7 @@ export class RegisterConductorStandaloneUseCase {
           email,
           phone,
           role: Role.CONDUCTOR,
+          homeRole: Role.CONDUCTOR,
           pinHash: hashPin(dto.pin),
         },
       });
@@ -329,8 +331,24 @@ export class CreateConductorPayoutUseCase {
     const relation = await this.prisma.driverConductorRelation.findFirst({
       where: { driverId, conductorId: dto.conductorId, active: true },
     });
-    if (!relation) {
-      throw new ForbiddenException("Este cobrador não está associado a si.");
+
+    let allowed = Boolean(relation);
+
+    if (!allowed && dto.sessionId) {
+      const session = await this.prisma.dailyWorkSession.findFirst({
+        where: {
+          id: dto.sessionId,
+          conductorId: dto.conductorId,
+          OR: [{ ownerDriverId: driverId }, { effectiveDriverId: driverId }],
+          status: { in: [WorkSessionStatus.ACTIVE, WorkSessionStatus.AWAITING_CONDUCTOR, WorkSessionStatus.ENDED] },
+        },
+        select: { id: true },
+      });
+      allowed = Boolean(session);
+    }
+
+    if (!allowed) {
+      throw new ForbiddenException("Este cobrador não está associado a si neste turno.");
     }
 
     const driver = await this.prisma.user.findUnique({ where: { id: driverId } });
@@ -375,6 +393,7 @@ export class ConfirmConductorPayoutUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationPublisherService,
+    private readonly pins: PinVerificationService,
   ) {}
 
   async execute(userId: string, role: Role, payoutId: string, dto: ConfirmPayoutDto & { amount?: number }) {
@@ -388,6 +407,10 @@ export class ConfirmConductorPayoutUseCase {
       if (payout.status !== PayoutStatus.AWAITING_DRIVER) {
         throw new BadRequestException("Pagamento já confirmado pelo motorista.");
       }
+      if (!dto.pin) {
+        throw new BadRequestException("Introduza o código secreto para confirmar o pagamento.");
+      }
+      await this.pins.assertValidPin(userId, dto.pin);
 
       const amount = dto.amount && dto.amount > 0 ? dto.amount : payout.amount;
       if (amount <= 0) throw new BadRequestException("Informe o valor a pagar.");
@@ -445,8 +468,8 @@ export class ConfirmConductorPayoutUseCase {
       await this.notifications.publish({
         userId: payout.conductorId,
         type: "PAYOUT_RECEIVED",
-        title: "Pagamento recebido?",
-        body: `O motorista enviou ${amount.toLocaleString("pt-AO")} Kz. Confirme que recebeu.`,
+        title: "Novo pagamento recebido",
+        body: `Recebeu ${amount.toLocaleString("pt-AO")} Kz do motorista. Confirme o recebimento.`,
         meta: { payoutId: payout.id, amount },
       });
 

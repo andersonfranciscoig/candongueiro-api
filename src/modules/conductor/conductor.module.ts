@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AuthModule } from "../../shared/infrastructure/auth/auth.module";
 import { MailModule } from "../mail/mail.module";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { IdentityModule } from "../identity/identity.module";
 import { TOKEN_SERVICE } from "../identity/application/ports/token.port";
 import { JwtTokenService } from "../identity/infrastructure/providers/jwt-token.service";
 import { ConductorController } from "./infrastructure/http/controllers/conductor.controller";
@@ -34,6 +35,7 @@ import {
     AuthModule,
     MailModule,
     NotificationsModule,
+    IdentityModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

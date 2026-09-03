@@ -20,6 +20,8 @@ export type MetricsPointDto = {
   secondary: number;
 };
 
+type MetricsAudience = "driver" | "conductor" | "passenger";
+
 function startOfDay(d: Date): Date {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
@@ -44,8 +46,21 @@ export class GetWalletMetricsUseCase {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException("Utilizador");
 
-    const isDriver = user.role === "DRIVER";
-    const types = isDriver ? [TransactionType.RECEIPT] : [TransactionType.PAYMENT];
+    const audience: MetricsAudience =
+      user.role === "DRIVER"
+        ? "driver"
+        : user.role === "CONDUCTOR"
+          ? "conductor"
+          : "passenger";
+
+    const types =
+      audience === "driver"
+        ? [TransactionType.RECEIPT]
+        : audience === "conductor"
+          ? [TransactionType.CONDUCTOR_PAYOUT]
+          : [TransactionType.PAYMENT];
+
+    const earnSide = audience === "driver" || audience === "conductor";
 
     const anchor =
       query.period === "custom" && query.date
@@ -55,7 +70,7 @@ export class GetWalletMetricsUseCase {
     const { from, to, subtitle, periodLabel } = this.resolveRange(
       query.period,
       anchor,
-      isDriver,
+      earnSide,
     );
 
     const rows = await this.prisma.ledgerTransaction.findMany({
@@ -64,6 +79,7 @@ export class GetWalletMetricsUseCase {
         type: { in: types },
         status: TransactionStatus.COMPLETED,
         createdAt: { gte: from, lte: to },
+        ...(audience === "conductor" ? { amount: { gt: 0 } } : {}),
       },
       select: { amount: true, createdAt: true },
       orderBy: { createdAt: "asc" },
@@ -71,13 +87,13 @@ export class GetWalletMetricsUseCase {
 
     const points = this.aggregate(query.period, anchor, rows);
 
-    return { points, subtitle, periodLabel, role: isDriver ? "driver" : "passenger" };
+    return { points, subtitle, periodLabel, role: audience };
   }
 
   private resolveRange(
     period: WalletMetricsQueryDto["period"],
     anchor: Date,
-    isDriver: boolean,
+    earnSide: boolean,
   ) {
     if (period === "day" || period === "custom") {
       const day = startOfDay(anchor);
@@ -86,10 +102,10 @@ export class GetWalletMetricsUseCase {
         from: day,
         to: endOfDay(day),
         subtitle: custom
-          ? isDriver
+          ? earnSide
             ? `Recebimentos de ${formatDayLabel(day)}`
             : `Gastos de ${formatDayLabel(day)}`
-          : isDriver
+          : earnSide
             ? "Recebimentos de hoje por horário"
             : "Hoje por horário",
         periodLabel: custom ? formatDayLabel(day) : "Hoje",

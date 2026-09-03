@@ -100,7 +100,10 @@ model User {
   name      String
   email     String   @unique
   phone     String   @unique
+  /// Papel activo da sessão (JWT / UI).
   role      Role
+  /// Papel profissional de registo — permite voltar após modo passageiro.
+  homeRole  Role
   balance   Int      @default(0)
   pinHash   String?
   createdAt DateTime @default(now())

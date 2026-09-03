@@ -1,5 +1,6 @@
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, MinLength } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Role } from "@prisma/client";
+import { IsEnum, IsOptional, IsString, MinLength } from "class-validator";
 
 export class UpdateProfileDto {
   @ApiPropertyOptional()
@@ -12,4 +13,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   phone?: string;
+}
+
+export class SwitchRoleDto {
+  @ApiProperty({ enum: [Role.PASSENGER, Role.DRIVER, Role.CONDUCTOR] })
+  @IsEnum(Role)
+  role!: Role;
 }

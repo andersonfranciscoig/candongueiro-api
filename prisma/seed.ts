@@ -11,6 +11,7 @@ async function main() {
       email: "anderson@email.com",
       phone: "+244 923 000 000",
       role: Role.PASSENGER,
+      homeRole: Role.PASSENGER,
       balance: 12_500,
       wallet: { create: {} },
     },
@@ -24,6 +25,7 @@ async function main() {
       email: "joao.motorista@email.com",
       phone: "+244 912 000 000",
       role: Role.DRIVER,
+      homeRole: Role.DRIVER,
       balance: 18_500,
       wallet: { create: {} },
       vehicles: {

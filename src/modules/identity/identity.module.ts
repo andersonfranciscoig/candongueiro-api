@@ -27,7 +27,7 @@ import { BrevoOtpSender } from "./infrastructure/providers/brevo-otp.sender";
 import { JwtTokenService } from "./infrastructure/providers/jwt-token.service";
 import { AuthController } from "./infrastructure/http/controllers/auth.controller";
 import { ProfileController } from "./infrastructure/http/controllers/profile.controller";
-import { GetProfileUseCase, UpdateProfileUseCase } from "./application/use-cases/profile.use-case";
+import { GetProfileUseCase, SwitchRoleUseCase, UpdateProfileUseCase } from "./application/use-cases/profile.use-case";
 
 @Module({
   imports: [
@@ -57,6 +57,7 @@ import { GetProfileUseCase, UpdateProfileUseCase } from "./application/use-cases
     PinVerificationService,
     GetProfileUseCase,
     UpdateProfileUseCase,
+    SwitchRoleUseCase,
     ConsoleOtpSender,
     BrevoOtpSender,
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },

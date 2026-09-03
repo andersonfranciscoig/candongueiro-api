@@ -15,12 +15,19 @@ export class PrismaUserRepository implements UserRepository {
     email: string;
     phone: string;
     role: PrismaRole;
+    homeRole: PrismaRole;
     balance: number;
     createdAt: Date;
   }) {
     return UserEntity.create({
-      ...row,
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
       role: row.role as Role,
+      homeRole: row.homeRole as Role,
+      balance: row.balance,
+      createdAt: row.createdAt,
     });
   }
 
@@ -66,6 +73,8 @@ export class PrismaUserRepository implements UserRepository {
         email: user.email.value,
         phone: user.phone.value,
         balance: user.balance,
+        role: user.role as PrismaRole,
+        homeRole: user.homeRole as PrismaRole,
       },
     });
     return this.map(row);
@@ -85,6 +94,7 @@ export class PrismaUserRepository implements UserRepository {
         email: input.email,
         phone: input.phone,
         role: input.role as PrismaRole,
+        homeRole: input.role as PrismaRole,
         balance: input.balance ?? 0,
         pinHash: input.pinHash,
         wallet: { create: {} },

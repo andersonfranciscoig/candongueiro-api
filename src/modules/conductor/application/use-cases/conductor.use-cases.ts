@@ -158,6 +158,7 @@ export class RegisterConductorUseCase {
           email,
           phone: normalizedPhone,
           role: Role.CONDUCTOR,
+          homeRole: Role.CONDUCTOR,
           pinHash: hashPin(dto.pin),
         },
       });

@@ -8,7 +8,8 @@ export class UserEntity {
     public name: string,
     public email: Email,
     public phone: Phone,
-    readonly role: Role,
+    public role: Role,
+    public homeRole: Role,
     public balance: number,
     readonly createdAt: Date,
   ) {}
@@ -19,6 +20,7 @@ export class UserEntity {
     email: string;
     phone: string;
     role: Role;
+    homeRole?: Role;
     balance?: number;
     createdAt?: Date;
   }) {
@@ -28,6 +30,7 @@ export class UserEntity {
       new Email(input.email),
       new Phone(input.phone),
       input.role,
+      input.homeRole ?? input.role,
       input.balance ?? 0,
       input.createdAt ?? new Date(),
     );
@@ -50,5 +53,21 @@ export class UserEntity {
 
   updatePhone(phone: string) {
     this.phone = new Phone(phone);
+  }
+
+  setActiveRole(role: Role) {
+    this.role = role;
+  }
+
+  /** Papéis para os quais esta conta pode fazer switch (mesma carteira). */
+  switchableRoles(): Role[] {
+    if (this.homeRole === Role.DRIVER || this.homeRole === Role.CONDUCTOR) {
+      return [this.homeRole, Role.PASSENGER];
+    }
+    return [this.homeRole];
+  }
+
+  canSwitchTo(role: Role): boolean {
+    return this.switchableRoles().includes(role);
   }
 }
